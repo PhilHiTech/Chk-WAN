@@ -253,7 +253,7 @@ QUIET=
 
 MOUNT="/tmp"												# v1.15
 # Single instance semaphore
-LOCKFILE=${MOUNT}"/"$(basename $0)"-running"				# v1.15
+LOCKFILE="${MOUNT}/$(basename "$0")-running"
 
 if [ "$1" == "status" ];then						# v1.15
 	if [ -n "$(ps -w | grep $(basename $0) | grep -v "grep $(basename $0)" | grep -v "status")" ];then
@@ -447,7 +447,7 @@ fi
 
 FD=166									# v1.15
 eval exec "$FD>$LOCKFILE"
-flock -n $FD || { Say "$VER Check WAN monitor ALREADY running...ABORTing"; exit; }		# v1.15
+flock -n $FD || { Say "$VER Check WAN monitor ALREADY running...ABORTing"; exit 1; }		# v1.15
 
 #if [ "$QUIET" != "quiet" ];then
 	echo -e $cBMAG

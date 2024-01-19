@@ -447,7 +447,7 @@ fi
 
 FD=166									# v1.15
 eval exec "$FD>$LOCKFILE"
-flock -w 2 $FD || { Say "$VER Check WAN monitor ALREADY running...ABORTing"; exit; }		# v1.15
+flock -n $FD || { Say "$VER Check WAN monitor ALREADY running...ABORTing"; exit; }		# v1.15
 
 #if [ "$QUIET" != "quiet" ];then
 	echo -e $cBMAG

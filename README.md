@@ -90,7 +90,7 @@ Installation
 
 Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm, PuTTY etc. to copy'n'paste:
 
-	curl --retry 3 "https://raw.githubusercontent.com/MartineauUK/Chk-WAN/master/ChkWAN.sh" -o "/jffs/scripts/ChkWAN.sh" && chmod 755 "/jffs/scripts/ChkWAN.sh"
+	curl --retry 3 "https://raw.githubusercontent.com/PhilHiTech/Chk-WAN/master/ChkWAN.sh" -o "/jffs/scripts/ChkWAN.sh" && chmod 755 "/jffs/scripts/ChkWAN.sh"
 
 You can manually test the script with the default PING method, and the script will simply passively report the status, rather proactively restart the WAN or REBOOT
 

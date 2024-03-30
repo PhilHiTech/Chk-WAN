@@ -57,7 +57,7 @@ The complete list of command options may be retrieved using
 #           ChkWAN  wan
 #                   Will restart the WAN interface (instead of a FULL REBOOT) if the PINGs to ALL of the hosts FAIL
 #           ChkWAN  rebootwan
-#                   Will restart the WAN interface if the PINGs to ALL of the hosts FAIL, and if the PINGs to ALL of the hosts FAIL again, will REBOOT router
+#                   Will restart the WAN interface if the PINGs to ALL of the hosts FAIL, and if after 20 seconds the PINGs to ALL of the hosts FAIL again, will REBOOT router
 #           ChkWAN  stop
 #                   Will request termination of script. It will be dependent on the 'sleep' interval
 #                   NOTE: If scheduled by cron this will have no effect.

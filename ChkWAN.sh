@@ -10,7 +10,7 @@ VER="v1.17"
 #                   [reboot | wan | noaction | rebootwan] [force[big | small]] [nowait] [quiet] [once] [i={[wan0|wan1]}] [googleonly] [curl] [ping='ping_target[,..]']
 #                   [tries=number] [fails=number] [curlrate=number] [verbose] [cron[=[cron_spec]]] [status] [stop]
 #
-#           ChkWAN
+#           ChkWAN  reboot
 #                   Will REBOOT router if the PINGs to ALL of the hosts FAILS
 #           ChkWAN  force
 #                   Will REBOOT router if the PINGs to ALL of the hosts FAIL, but after each group PING attempt, a physical 10MByte data download is attempted.
@@ -21,6 +21,8 @@ VER="v1.17"
 #                   Will report if Check WAN monitor is running
 #           ChkWAN  wan
 #                   Will restart the WAN interface (instead of a FULL REBOOT) if the PINGs to ALL of the hosts FAIL
+#           ChkWAN  rebootwan
+#                   Will restart the WAN interface if the PINGs to ALL of the hosts FAIL, and will REBOOT router if the PINGs to ALL of the hosts FAIL again
 #           ChkWAN  stop
 #                   Will request termination of script. It will be dependent on the 'sleep' interval
 #                   NOTE: If scheduled by cron this will have no effect.

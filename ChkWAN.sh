@@ -598,6 +598,7 @@ elif [ "$ACTION" == "REBOOTAFTERWAN" ];then
 	else
 		service "restart_wan_if $WAN_INDEX"
 	fi
+ 	sleep 20
 	# Check connection again
  	Check_WAN $TARGET $FORCE_WGET
  	if [ $STATUS -gt 0 ]; then

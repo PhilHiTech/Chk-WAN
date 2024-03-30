@@ -7,8 +7,8 @@ VER="v1.17"
 #         Usually the Recovery action (REBOOT or restart the WAN) occurs in about 90 secs (PING ONLY) or in about 03:30 mins for 'force' data download
 #
 # Usage:    ChkWAN  [help|-h]
-#                   [reboot | wan | noaction] [force[big | small]] [nowait] [quiet] [once] [i={[wan0|wan1]}] [googleonly] [curl] [ping='ping_target[,..]']
-#                   [tries=number] [fails=number] [curlrate=number] [verbose] [cron[=[cron_spec]]] [status] [stop
+#                   [reboot | wan | noaction | rebootwan] [force[big | small]] [nowait] [quiet] [once] [i={[wan0|wan1]}] [googleonly] [curl] [ping='ping_target[,..]']
+#                   [tries=number] [fails=number] [curlrate=number] [verbose] [cron[=[cron_spec]]] [status] [stop]
 #
 #           ChkWAN
 #                   Will REBOOT router if the PINGs to ALL of the hosts FAILS
@@ -306,6 +306,10 @@ if [ -n "$1" ];then
 		ACTION="WANONLY"
 	fi
 
+	if [ "$(echo $@ | grep -cw 'rebootwan')" -gt 0 ];then
+		ACTION="REBOOTAFTERWAN"
+	fi
+
 	# v1.12 'verbose' option is allowed for the cURL requests
 	[ "$(echo $@ | grep -cw 'verbose')" -gt 0 ] && CMDVERBOSE="Y"
 
@@ -584,6 +588,15 @@ if [ "$ACTION" == "WANONLY" ];then
 	#Say "Re-requesting monitoring....in" $INTERVAL_SECS "secs"
 	#sleep $INTERVAL_SECS
 	#sh /jffs/scripts/$0 &							# Let wan-start 'sh /jffs/scripts/ChkWAN.sh &' start the monitoring!!!!!
+elif [ "$ACTION" == "REBOOTAFTERWAN" ];then
+	Say "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
+	killall -USR1 udhcpc
+	sleep 10
+	if [ -z "$WAN_INDEX" ];then
+		service restart_wan
+	else
+		service "restart_wan_if $WAN_INDEX"
+	fi
 
 else
 	echo -e ${cBRED}$aBLINK"\a\n\n\t"

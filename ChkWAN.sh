@@ -22,7 +22,7 @@ VER="v1.17"
 #           ChkWAN  wan
 #                   Will restart the WAN interface (instead of a FULL REBOOT) if the PINGs to ALL of the hosts FAIL
 #           ChkWAN  rebootwan
-#                   Will restart the WAN interface if the PINGs to ALL of the hosts FAIL, and will REBOOT router if the PINGs to ALL of the hosts FAIL again
+#                   Will restart the WAN interface if the PINGs to ALL of the hosts FAIL, and if after 20 seconds the PINGs to ALL of the hosts FAIL again, will REBOOT router
 #           ChkWAN  stop
 #                   Will request termination of script. It will be dependent on the 'sleep' interval
 #                   NOTE: If scheduled by cron this will have no effect.

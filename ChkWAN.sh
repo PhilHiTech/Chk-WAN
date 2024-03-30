@@ -589,6 +589,7 @@ if [ "$ACTION" == "WANONLY" ];then
 	#sleep $INTERVAL_SECS
 	#sh /jffs/scripts/$0 &							# Let wan-start 'sh /jffs/scripts/ChkWAN.sh &' start the monitoring!!!!!
 elif [ "$ACTION" == "REBOOTAFTERWAN" ];then
+	connection_ok=0
 	Say "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
 	killall -USR1 udhcpc
 	sleep 10
@@ -597,7 +598,17 @@ elif [ "$ACTION" == "REBOOTAFTERWAN" ];then
 	else
 		service "restart_wan_if $WAN_INDEX"
 	fi
-
+	# Check connection again
+ 	Check_WAN $TARGET $FORCE_WGET
+ 	if [ $STATUS -gt 0 ]; then
+ 		connection_ok=1
+	fi
+	if [ $connection_ok -eq 0 ]; then
+		echo -e ${cBRED}$aBLINK"\a\n\n\t"
+		Say "Rebooting..... (Action="$ACTION")"
+		echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE
+		service start_reboot							# Default REBOOT
+  	fi
 else
 	echo -e ${cBRED}$aBLINK"\a\n\n\t"
 	Say "Rebooting..... (Action="$ACTION")"

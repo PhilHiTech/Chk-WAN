@@ -603,7 +603,7 @@ elif [ "$ACTION" == "REBOOTAFTERWAN" ];then
  	if [ $STATUS -gt 0 ]; then
  		connection_ok=1
 	fi
-	if [ $connection_ok -eq 0 ]; then
+	if [ $connection_ok -eq 0 ];then
 		echo -e ${cBRED}$aBLINK"\a\n\n\t"
 		Say "Rebooting..... (Action="$ACTION")"
 		echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE

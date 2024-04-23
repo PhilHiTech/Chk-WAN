@@ -59,7 +59,7 @@ VER="v1.17"
 #               cru a Restart_WAN 28,38,58,8 * * * * /jffs/scripts/ChkWAN.sh wan force nowait
 #               cru a Reboot_WAN 48,18 * * * * /jffs/scripts/ChkWAN.sh reboot force nowait
 
-
+REBOOT_LOG_FILE="/tmp/chkwan_reboot_log"  # File to store last reboot timestamp
 
 # [URL="https://www.snbforums.com/threads/need-a-script-that-auto-reboot-if-internet-is-down.43819/#post-371791"]Need a script that auto reboot if internet is down[/URL]
 
@@ -577,6 +577,21 @@ fi
 
 echo -e $cBYEL"\a"
 # Failure after $INTERVAL_ALL_FAILED_SECS*$MAX_FAIL_CNT secs ?
+
+# Check for last reboot time before proceeding with REBOOTAFTERWAN action
+if [ "$ACTION" == "REBOOTAFTERWAN" ]; then
+	if [ -f "$REBOOT_LOG_FILE" ]; then
+		last_reboot_time=$(cat "$REBOOT_LOG_FILE")
+		time_now=$(date +%s)
+		time_diff=$((time_now - last_reboot_time))
+		if [ $time_diff -lt 900 ]; then  # Check if less than 30 minutes have passed
+			Say "Skipping reboot (REBOOTAFTERWAN): Last reboot was within 15 minutes."
+			flock -u $FD
+			exit 0
+		fi
+	fi
+fi
+
 if [ "$ACTION" == "WANONLY" ];then
 	Say "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
 	killall -USR1 udhcpc
@@ -611,6 +626,7 @@ elif [ "$ACTION" == "REBOOTAFTERWAN" ];then
 		Say "Rebooting..... (Action="$ACTION")"
 		echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE
 		service start_reboot							# Default REBOOT
+  		date +%s > "$REBOOT_LOG_FILE"  # Log the current time as the last reboot time
   	fi
 else
 	echo -e ${cBRED}$aBLINK"\a\n\n\t"

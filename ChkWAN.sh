@@ -584,7 +584,7 @@ if [ "$ACTION" == "REBOOTAFTERWAN" ]; then
 		last_reboot_time=$(cat "$REBOOT_LOG_FILE")
 		time_now=$(date +%s)
 		time_diff=$((time_now - last_reboot_time))
-		if [ $time_diff -lt 900 ]; then  # Check if less than 30 minutes have passed
+		if [ $time_diff -lt 900 ]; then  # Check if less than 15 minutes have passed
 			Say "Skipping reboot (REBOOTAFTERWAN): Last reboot was within 15 minutes."
 			flock -u $FD
 			exit 0

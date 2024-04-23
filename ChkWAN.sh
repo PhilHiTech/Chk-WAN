@@ -59,7 +59,7 @@ VER="v1.17"
 #               cru a Restart_WAN 28,38,58,8 * * * * /jffs/scripts/ChkWAN.sh wan force nowait
 #               cru a Reboot_WAN 48,18 * * * * /jffs/scripts/ChkWAN.sh reboot force nowait
 
-REBOOT_LOG_FILE="/tmp/chkwan_reboot_log"  # File to store last reboot timestamp
+REBOOT_LOG_FILE="/jffs/chkwan_reboot_log"  # File to store last reboot timestamp
 
 # [URL="https://www.snbforums.com/threads/need-a-script-that-auto-reboot-if-internet-is-down.43819/#post-371791"]Need a script that auto reboot if internet is down[/URL]
 

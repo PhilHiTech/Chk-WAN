@@ -59,8 +59,8 @@ VER="v1.17"
 #               cru a Restart_WAN 28,38,58,8 * * * * /jffs/scripts/ChkWAN.sh wan force nowait
 #               cru a Reboot_WAN 48,18 * * * * /jffs/scripts/ChkWAN.sh reboot force nowait
 
-REBOOT_LOG_FILE="/jffs/chkwan_reboot_log"  # File to store last reboot timestamp
-LOG_FILE="/jffs/chkwan_log.txt"  # File to store executed commands log
+REBOOT_LOG_FILE="/jffs/chkwan_reboot.txt"  # File to store last reboot timestamp
+LOG_FILE="/jffs/chkwan.log"  # File to store executed commands log
 
 # [URL="https://www.snbforums.com/threads/need-a-script-that-auto-reboot-if-internet-is-down.43819/#post-371791"]Need a script that auto reboot if internet is down[/URL]
 
@@ -247,7 +247,7 @@ SNAME="${0##*/}"							# Script name
 METHOD=
 ACTION="REBOOT"
 #FORCE_WGET_500B="http://proof.ovh.net/files/md5sum.txt"
-FORCE_WGET_500B="https://raw.githubusercontent.com/PhilHiTech/Chk-WAN/master/Test500B.txt"	# v1.17 ovh.net is AWOL	
+FORCE_WGET_500B="https://raw.githubusercontent.com/PhilHiTech/Chk-WAN/master/Test500B.txt"	# v1.17 ovh.net is AWOL
 #FORCE_WGET_5MB="http://cachefly.cachefly.net/5mb.test"		# v1.17 ovh.net is AWOL
 #FORCE_WGET_12MB="http://proof.ovh.net/files/100Mb.dat"
 FORCE_WGET_10MB="http://cachefly.cachefly.net/10mb.test"	# v1.17 ovh.net is AWOL
@@ -324,7 +324,7 @@ if [ -n "$1" ];then
 			FORCE_WGET=$FORCE_WGET_500B
 		else
 			#FORCE_WGET=$FORCE_WGET_10MB
-			FORCE_WGET=$FORCE_WGET_10MB						# v1.17			
+			FORCE_WGET=$FORCE_WGET_10MB						# v1.17
 		fi
 
 
@@ -582,32 +582,6 @@ fi
 echo -e $cBYEL"\a"
 # Failure after $INTERVAL_ALL_FAILED_SECS*$MAX_FAIL_CNT secs ?
 
-# Controlla se tutte le WAN sono KO
-all_wans_down=1
-wan_ifs=$(nvram get wan_ifnames)
-for wan_if in $wan_ifs; do
-	Check_WAN "$(nvram get "${wan_if}_gateway")" $FORCE_WGET
-	if [ $STATUS -gt 0 ]; then
-		all_wans_down=0
-		break
-	fi
-done
-
-
-
-# Check for last reboot time before proceeding with REBOOTAFTERWAN action
-if [ "$ACTION" == "REBOOTAFTERWAN" ]; then
-	if [ -f "$REBOOT_LOG_FILE" ]; then
-		last_reboot_time=$(cat "$REBOOT_LOG_FILE")
-		time_now=$(date +%s)
-		time_diff=$((time_now - last_reboot_time))
-		if [ $time_diff -lt 900 ]; then  # Check if less than 15 minutes have passed
-			Say "Skipping reboot (REBOOTAFTERWAN): Last reboot was within 15 minutes."
-			flock -u $FD
-			exit 0
-		fi
-	fi
-fi
 
 if [ "$ACTION" == "WANONLY" ];then
 	Say "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
@@ -622,23 +596,31 @@ if [ "$ACTION" == "WANONLY" ];then
 	#Say "Re-requesting monitoring....in" $INTERVAL_SECS "secs"
 	#sleep $INTERVAL_SECS
 	#sh /jffs/scripts/$0 &							# Let wan-start 'sh /jffs/scripts/ChkWAN.sh &' start the monitoring!!!!!
-elif [ "$ACTION" == "REBOOTAFTERWAN" ];then
-	connection_ok=0
-	Say "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
-	killall -USR1 udhcpc
-	sleep 10
-	if [ -z "$WAN_INDEX" ];then
-		service restart_wan
-	else
-		service "restart_wan_if $WAN_INDEX"
-	fi
-	sleep 20
-	# Check connection again
-	Check_WAN $TARGET $FORCE_WGET
-	if [ $STATUS -gt 0 ]; then
-		connection_ok=1
-	fi
-	if [ $connection_ok -eq 0 ];then
+
+# Check for last reboot time before proceeding with REBOOTAFTERWAN action
+elif [ "$ACTION" == "REBOOTAFTERWAN" ]; then
+	# Controlla se tutte le WAN sono KO
+	all_wans_down=1
+	wan_ifs=$(nvram get wan_ifnames)
+	for wan_if in $wan_ifs; do
+		Check_WAN "$(nvram get "${wan_if}_gateway")" $FORCE_WGET
+		if [ $STATUS -gt 0 ]; then
+			all_wans_down=0
+			break
+		fi
+	done
+	if [ $all_wans_down -eq 1 ]; then
+		if [ -f "$REBOOT_LOG_FILE" ]; then
+			last_reboot_time=$(cat "$REBOOT_LOG_FILE")
+			time_now=$(date +%s)
+			time_diff=$((time_now - last_reboot_time))
+			if [ $time_diff -lt 1800 ]; then  # Check if less than 30 minutes have passed
+				Say "Skipping reboot (REBOOTAFTERWAN): Last reboot was within 30 minutes."
+				flock -u $FD
+				exit 0
+			fi
+		fi
+
 		echo -e ${cBRED}$aBLINK"\a\n\n\t"
 		Say "Rebooting..... (Action="$ACTION")"
 		echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE

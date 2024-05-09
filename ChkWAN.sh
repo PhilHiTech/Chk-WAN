@@ -59,7 +59,9 @@ VER="v1.17"
 #               cru a Restart_WAN 28,38,58,8 * * * * /jffs/scripts/ChkWAN.sh wan force nowait
 #               cru a Reboot_WAN 48,18 * * * * /jffs/scripts/ChkWAN.sh reboot force nowait
 
-REBOOT_LOG_FILE="/jffs/chkwan_reboot.txt"  # File to store last reboot timestamp
+REBOOT_TIME_FILE="/jffs/chkwan_reboot.txt"  # File to store last reboot timestamp
+WAN0_KO_FILE="/jffs/chkwan_wan0.txt"  # File to store last reboot timestamp
+WAN1_KO_FILE="/jffs/chkwan_wan1.txt"  # File to store last reboot timestamp
 LOG_FILE="/jffs/chkwan.log"  # File to store executed commands log
 
 # [URL="https://www.snbforums.com/threads/need-a-script-that-auto-reboot-if-internet-is-down.43819/#post-371791"]Need a script that auto reboot if internet is down[/URL]
@@ -77,12 +79,16 @@ ANSIColours() {
 
 Say(){
 	echo -e $$ $@ | logger -st "($(basename $0))"
+}
+
+SayAndLog(){
+	echo -e $$ $@ | logger -st "($(basename $0))"
 	echo "$(date '+%Y-%m-%d %H:%M:%S') $$ $@" >> "$LOG_FILE"
 }
 
 SayT(){
 	echo -e $$ $@ | logger -t "($(basename $0))"
-	echo "$(date '+%Y-%m-%d %H:%M:%S') $$ $@" >> "$LOG_FILE"
+	# echo "$(date '+%Y-%m-%d %H:%M:%S') $$ $@" >> "$LOG_FILE"
 }
 
 Is_Private_IPv4() {
@@ -207,19 +213,19 @@ Check_WAN(){
 			if [ $RC -eq 0 ] && [ $(echo $RESULTS | cut -d',' -f3 | cut -d'.' -f1) -lt $FORCE_WGET_MIN_RATE ];then
 				STATUS=0
 				echo -en $cBRED"\n\a"
-				Say "***ERROR cURL file transfer rate '"$(echo $RESULTS | cut -d',' -f3 | cut -d'.' -f1)"' Bytes/sec, is less than the acceptable minimum specified '"$FORCE_WGET_MIN_RATE"' Bytes/sec"
+				SayAndLog "***ERROR cURL file transfer rate '"$(echo $RESULTS | cut -d',' -f3 | cut -d'.' -f1)"' Bytes/sec, is less than the acceptable minimum specified '"$FORCE_WGET_MIN_RATE"' Bytes/sec"
 				echo -en $cBYEL
 				METHOD=" using MINIMIUM acceptable cURL transfer rate"
 			fi
 		else
 			echo -en $cBRED
-			Say "***ERROR cURL '"$WGET_DATA"' transfer FAILED RC="$RC
+			SayAndLog "***ERROR cURL '"$WGET_DATA"' transfer FAILED RC="$RC
 			echo -n
 			FORCE_OK=0
 			if [ $RC -ne 8 ];then
 				STATUS=0												# Override PING/curl status!!
 			else
-				Say "*Warning cURL '"$WGET_DATA"' URL invalid?"		# URL invalid so could be OFFLINE so ignore it
+				SayAndLog "*Warning cURL '"$WGET_DATA"' URL invalid?"		# URL invalid so could be OFFLINE so ignore it
 			fi
 		fi
 	fi
@@ -334,7 +340,7 @@ if [ -n "$1" ];then
 			FORCE_WGET_MIN_RATE="$(echo "$@" | sed -n "s/^.*curlrate=//p" | awk '{print $1}' | grep -E "[[:digit:]]")"
 			if [ -z "$FORCE_WGET_MIN_RATE" ];then
 				echo -en $cBRED"\a\n\t"
-				Say "***ERROR cURL minimum acceptable transfer RATE INVALID 'i="$(echo "$@" | sed -n "s/^.*curlrate=//p" | awk '{print $1}')"'"
+				SayAndLog "***ERROR cURL minimum acceptable transfer RATE INVALID 'i="$(echo "$@" | sed -n "s/^.*curlrate=//p" | awk '{print $1}')"'"
 				echo -en $cRESET
 				exit 998
 			fi
@@ -359,7 +365,7 @@ if [ -n "$1" ];then
 		DEV=$(Get_WAN_IF_Name "$WAN_INDEX")						# Virtual 'wan0/wan1' -> $dev e.g. 'wan0' -> 'eth0' v1.08a
 		if [ -z "$DEV" ];then
 			echo -en $cBRED"\a\n\t"
-			Say "***ERROR WAN interface INVALID 'i="$(echo "$@" | sed -n "s/^.*i=//p" | awk '{print $1}')"'"
+			SayAndLog "***ERROR WAN interface INVALID 'i="$(echo "$@" | sed -n "s/^.*i=//p" | awk '{print $1}')"'"
 			echo -en $cRESET
 			exit 999
 		fi
@@ -496,7 +502,7 @@ while [ $FAIL_CNT -lt $MAX_FAIL_CNT ]; do
 						METHOD="using cURL data IP retrieval method"
 					fi
 				fi
-				Say $VER "Monitoring" $WAN_NAME $DEV_TXT "connection" $METHOD "check FAILED"
+				SayAndLog $VER "Monitoring" $WAN_NAME $DEV_TXT "connection" $METHOD "check FAILED"
 				echo -e								# v1.14
 			fi
 		fi
@@ -584,7 +590,7 @@ echo -e $cBYEL"\a"
 
 
 if [ "$ACTION" == "WANONLY" ];then
-	Say "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
+	SayAndLog "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
 	killall -USR1 udhcpc
 	sleep 10
 	if [ -z "$WAN_INDEX" ];then
@@ -599,46 +605,78 @@ if [ "$ACTION" == "WANONLY" ];then
 
 # Check for last reboot time before proceeding with REBOOTAFTERWAN action
 elif [ "$ACTION" == "REBOOTAFTERWAN" ]; then
-	Say "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
-	killall -USR1 udhcpc
-	sleep 10
-	if [ -z "$WAN_INDEX" ];then
-		service restart_wan
-	else
-		service "restart_wan_if $WAN_INDEX"
-	fi
- 	sleep 15
-	# Controlla se tutte le WAN sono KO
-	all_wans_down=1
-	wan_ifs=$(nvram get wan_ifnames)
-	for wan_if in $wan_ifs; do
-		Check_WAN "$(nvram get "${wan_if}_gateway")" $FORCE_WGET
-		if [ $STATUS -gt 0 ]; then
-			all_wans_down=0
-			break
-		fi
-	done
-	if [ $all_wans_down -eq 1 ]; then
-		if [ -f "$REBOOT_LOG_FILE" ]; then
-			last_reboot_time=$(cat "$REBOOT_LOG_FILE")
-			time_now=$(date +%s)
-			time_diff=$((time_now - last_reboot_time))
-			if [ $time_diff -lt 1800 ]; then  # Check if less than 30 minutes have passed
-				Say "Skipping reboot (REBOOTAFTERWAN): Last reboot was within 30 minutes."
-				flock -u $FD
-				exit 0
-			fi
-		fi
 
-		echo -e ${cBRED}$aBLINK"\a\n\n\t"
-		Say "Rebooting..... (Action="$ACTION")"
-		echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE
-  		date +%s > "$REBOOT_LOG_FILE"  # Log the current time as the last reboot time
-		service start_reboot							# Default REBOOT
+	if [ -f "$WAN0_KO_FILE" ]; then
+		last_wan0_ko=$(cat "$WAN0_KO_FILE")
+	else
+		last_wan0_ko=0
+		echo "0" > "$WAN0_KO_FILE"
 	fi
+	if [ -f "$WAN1_KO_FILE" ]; then
+		last_wan1_ko=$(cat "$WAN1_KO_FILE")
+	else
+		last_wan1_ko=0
+		echo "0" > "$WAN1_KO_FILE"
+	fi
+
+	# now_wan0_ko=0
+	# now_wan1_ko=0
+	if ! [ -z "$WAN_INDEX" ]; then
+		if [ $WAN_INDEX -eq 0 ]; then
+			#now_wan0_ko=1
+			echo "1" > "$WAN0_KO_FILE"
+		else
+			#now_wan1_ko=1
+			echo "1" > "$WAN1_KO_FILE"
+		fi
+	else
+		echo "1" > "$WAN0_KO_FILE"
+	fi
+
+	all_wans_down=0
+	if ! [ -z "$WAN_INDEX" ]; then
+		if [ $last_wan0_ko -eq 1 ] && [ $last_wan1_ko -eq 1 ]; then
+			all_wans_down=1
+		fi
+	fi
+
+	if [ $all_wans_down -eq 0 ]; then
+		SayAndLog "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
+		killall -USR1 udhcpc
+		sleep 10
+		if [ -z "$WAN_INDEX" ];then
+			service restart_wan
+		else
+			service "restart_wan_if $WAN_INDEX"
+		fi
+	fi
+
+	if [ $all_wans_down -eq 1 ] || [ -z "$WAN_INDEX" ]; then
+		if [ $last_wan0_ko -eq 1 ]; then
+			if [ -f "$REBOOT_TIME_FILE" ]; then
+				last_reboot_time=$(cat "$REBOOT_TIME_FILE")
+				time_now=$(date +%s)
+				time_diff=$((time_now - last_reboot_time))
+				if [ $time_diff -lt 1800 ]; then  # Check if less than 30 minutes have passed
+					Say "Skipping reboot (REBOOTAFTERWAN): Last reboot was within 30 minutes."
+					flock -u $FD
+					exit 0
+				fi
+			fi
+
+			echo -e ${cBRED}$aBLINK"\a\n\n\t"
+			SayAndLog "Rebooting..... (Action="$ACTION")"
+			echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE
+			date +%s > "$REBOOT_TIME_FILE"  # Log the current time as the last reboot time
+			echo "0" > "$WAN0_KO_FILE"
+			echo "0" > "$WAN1_KO_FILE"
+			service start_reboot							# Default REBOOT
+		fi
+	fi
+
 else
 	echo -e ${cBRED}$aBLINK"\a\n\n\t"
-	Say "Rebooting..... (Action="$ACTION")"
+	SayAndLog "Rebooting..... (Action="$ACTION")"
 	echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE
 	service start_reboot							# Default REBOOT
 fi

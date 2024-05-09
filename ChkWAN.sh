@@ -60,6 +60,7 @@ VER="v1.17"
 #               cru a Reboot_WAN 48,18 * * * * /jffs/scripts/ChkWAN.sh reboot force nowait
 
 REBOOT_LOG_FILE="/jffs/chkwan_reboot_log"  # File to store last reboot timestamp
+LOG_FILE="/jffs/chkwan_log.txt"  # File to store executed commands log
 
 # [URL="https://www.snbforums.com/threads/need-a-script-that-auto-reboot-if-internet-is-down.43819/#post-371791"]Need a script that auto reboot if internet is down[/URL]
 
@@ -68,19 +69,22 @@ ShowHelp() {
 }
 # shellcheck disable=SC2034
 ANSIColours() {
-
 	cRESET="\e[0m";cBLA="\e[30m";cRED="\e[31m";cGRE="\e[32m";cYEL="\e[33m";cBLU="\e[34m";cMAG="\e[35m";cCYA="\e[36m";cGRA="\e[37m"
 	cBGRA="\e[90m";cBRED="\e[91m";cBGRE="\e[92m";cBYEL="\e[93m";cBBLU="\e[94m";cBMAG="\e[95m";cBCYA="\e[96m";cBWHT="\e[97m"
 	aBOLD="\e[1m";aDIM="\e[2m";aUNDER="\e[4m";aBLINK="\e[5m";aREVERSE="\e[7m"
 	cRED_="\e[41m";cGRE_="\e[42m"
+}
 
-}
 Say(){
-   echo -e $$ $@ | logger -st "($(basename $0))"
+	echo -e $$ $@ | logger -st "($(basename $0))"
+	echo "$(date '+%Y-%m-%d %H:%M:%S') $$ $@" >> "$LOG_FILE"
 }
+
 SayT(){
-   echo -e $$ $@ | logger -t "($(basename $0))"
+	echo -e $$ $@ | logger -t "($(basename $0))"
+	echo "$(date '+%Y-%m-%d %H:%M:%S') $$ $@" >> "$LOG_FILE"
 }
+
 Is_Private_IPv4() {
 	# 127.  0.0.0 – 127.255.255.255     127.0.0.0 /8
 	# 10.   0.0.0 –  10.255.255.255      10.0.0.0 /8
@@ -578,6 +582,19 @@ fi
 echo -e $cBYEL"\a"
 # Failure after $INTERVAL_ALL_FAILED_SECS*$MAX_FAIL_CNT secs ?
 
+# Controlla se tutte le WAN sono KO
+all_wans_down=1
+wan_ifs=$(nvram get wan_ifnames)
+for wan_if in $wan_ifs; do
+	Check_WAN "$(nvram get "${wan_if}_gateway")" $FORCE_WGET
+	if [ $STATUS -gt 0 ]; then
+		all_wans_down=0
+		break
+	fi
+done
+
+
+
 # Check for last reboot time before proceeding with REBOOTAFTERWAN action
 if [ "$ACTION" == "REBOOTAFTERWAN" ]; then
 	if [ -f "$REBOOT_LOG_FILE" ]; then
@@ -615,19 +632,19 @@ elif [ "$ACTION" == "REBOOTAFTERWAN" ];then
 	else
 		service "restart_wan_if $WAN_INDEX"
 	fi
- 	sleep 20
+	sleep 20
 	# Check connection again
- 	Check_WAN $TARGET $FORCE_WGET
- 	if [ $STATUS -gt 0 ]; then
- 		connection_ok=1
+	Check_WAN $TARGET $FORCE_WGET
+	if [ $STATUS -gt 0 ]; then
+		connection_ok=1
 	fi
 	if [ $connection_ok -eq 0 ];then
 		echo -e ${cBRED}$aBLINK"\a\n\n\t"
 		Say "Rebooting..... (Action="$ACTION")"
 		echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE
 		service start_reboot							# Default REBOOT
-  		date +%s > "$REBOOT_LOG_FILE"  # Log the current time as the last reboot time
-  	fi
+		date +%s > "$REBOOT_LOG_FILE"  # Log the current time as the last reboot time
+	fi
 else
 	echo -e ${cBRED}$aBLINK"\a\n\n\t"
 	Say "Rebooting..... (Action="$ACTION")"

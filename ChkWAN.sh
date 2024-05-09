@@ -599,6 +599,15 @@ if [ "$ACTION" == "WANONLY" ];then
 
 # Check for last reboot time before proceeding with REBOOTAFTERWAN action
 elif [ "$ACTION" == "REBOOTAFTERWAN" ]; then
+	Say "Renewing DHCP and restarting" $WAN_NAME "(Action="$ACTION")"
+	killall -USR1 udhcpc
+	sleep 10
+	if [ -z "$WAN_INDEX" ];then
+		service restart_wan
+	else
+		service "restart_wan_if $WAN_INDEX"
+	fi
+ 	sleep 15
 	# Controlla se tutte le WAN sono KO
 	all_wans_down=1
 	wan_ifs=$(nvram get wan_ifnames)

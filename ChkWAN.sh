@@ -624,8 +624,8 @@ elif [ "$ACTION" == "REBOOTAFTERWAN" ]; then
 		echo -e ${cBRED}$aBLINK"\a\n\n\t"
 		Say "Rebooting..... (Action="$ACTION")"
 		echo -e "\n\t\t**********Rebooting**********\n\n"$cBGRE
+  		date +%s > "$REBOOT_LOG_FILE"  # Log the current time as the last reboot time
 		service start_reboot							# Default REBOOT
-		date +%s > "$REBOOT_LOG_FILE"  # Log the current time as the last reboot time
 	fi
 else
 	echo -e ${cBRED}$aBLINK"\a\n\n\t"

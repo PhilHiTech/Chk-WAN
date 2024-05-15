@@ -524,6 +524,18 @@ while [ $FAIL_CNT -lt $MAX_FAIL_CNT ]; do
 			fi
 		fi
 
+		if ! [ -z "$WAN_INDEX" ]; then
+			if [ $WAN_INDEX -eq 0 ]; then
+				#now_wan0_ko=1
+				echo "0" > "$WAN0_KO_FILE"
+			else
+				#now_wan1_ko=1
+				echo "0" > "$WAN1_KO_FILE"
+			fi
+		else
+			echo "0" > "$WAN0_KO_FILE"
+		fi
+
 		# Is there a cron schedule?
 		if [ -z "$(cru l | grep "$SNAME")" ];then
 			if [ -z "$ONCE" ];then
